@@ -1,0 +1,360 @@
+Part 1 : Set up hadoop-oozie environment on EC2 clusters
+
+1. Set ssh login between EC2s
+ssh-keygen
+configure ssh between VMs
+
+2. Install java 
+sudo apt-get update
+sudo apt-get install openjdk-8-jdk
+vi .bashrc_profile
+export JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"
+source .bashrc_profile
+
+3. Install hadoop
+
+wget https://archive.apache.org/dist/hadoop/common/hadoop-2.6.5/hadoop-2.6.5.tar.gz
+tar xvzf hadoop-2.6.5.tar.gz
+
+------hadoop_env.sh-------
+
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
+
+export HADOOP_CONF_DIR=/home/ubuntu/hadoop-2.6.5/etc/hadoop
+for file in /home/ubuntu/hadoop-2.6.5/share/hadoop/*/*.jar
+do
+        export CLASSPATH=$CLASSPATH:$file
+done
+
+for file in /home/ubuntu/hadoop-2.6.5/share/hadoop/*/lib/*.jar
+do
+        export CLASSPATH=$CLASSPATH:$file
+done
+
+for f in $HADOOP_HOME/contrib/capacity-scheduler/*.jar; do
+  if [ "$HADOOP_CLASSPATH" ]; then
+    export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$f
+  else
+    export HADOOP_CLASSPATH=$f
+  fi
+done
+
+------core-site.xml-------
+
+<property>
+	<name>fs.defaultFS</name>
+	<value>hdfs://master:9000</value>
+</property>
+<property>
+	<name>hadoop.tmp.dir</name>
+	<value>file:/home/ubuntu/hadoop-2.6.5/tmp</value>
+</property>
+<property>
+	<name>hadoop.proxyuser.ubuntu.hosts</name>
+	<value>*</value>
+</property>
+<property>
+	<name>hadoop.proxyuser.ubuntu.groups</name>
+	<value>*</value>
+</property>
+
+------hdfs-site.xml-------
+
+<property>
+	<name>dfs.namenode.name.dir</name>
+	<value>file:/home/ubuntu/hadoop-2.6.5/dfs/name</value>
+</property>
+<property>
+	<name>dfs.namenode.data.dir</name>
+	<value>file:/home/ubuntu/hadoop-2.6.5/dfs/data</value>
+</property>
+
+------mapred-site.xml-------
+
+<property>
+	<name>mapreduce.framework.name</name>
+	<value>yarn</value>
+</property>
+
+------yarn-site.xml-------
+
+<property>
+	<name>yarn.nodemanager.aux-services</name>
+	<value>mapreduce_shuffle</value>
+</property>
+<property>
+	<name>yarn.resourcemanager.address</name>
+	<value>master:8032</value>
+</property>
+<property>
+	<name>yarn.resourcemanager.scheduler.address</name>
+	<value>master:8030</value>
+</property>
+
+<property>
+	<name>yarn.resourcemanager.resource-tracker.address</name>
+	<value>master:8035</value>
+</property>
+<property>
+	<name>yarn.resourcemanager.admin.address</name>
+	<value>master:8033</value>
+</property>
+<property>
+	<name>yarn.resourcemanager.webapp.address</name>
+	<value>master:8088</value>
+</property>
+<property>
+	<name>yarn.resourcemanager.hostname</name>
+	<value>master</value>
+</property>
+<property>
+	<name>yarn.resourcemanager.scheduler.class</name>
+	<value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler</value>
+</property>
+<property>
+	<name>yarn.scheduler.minimum-allocation-mb</name>
+	<value>128</value>
+</property>
+<property>
+	<name>yarn.scheduler.maximum-allocation-mb</name>
+	<value>2048</value>
+</property>
+
+------slaves-------
+
+set /etc/hosts, add the following lines
+172.31.24.40 master
+172.31.5.225 slave1
+172.31.10.97 slave2
+
+set hadoop/etc/hadoop/slaves, remove localhost, set as following
+slave1
+slave2
+
+------.profile-------
+
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
+export HADOOP_HOME=/home/ubuntu/hadoop-2.6.5
+export HADOOP_PREFIX=/home/ubuntu/hadoop-2.6.5
+export M2_HOME=/usr/share/maven
+export HADOOP_PID_DIR=/home/ubuntu/hadoop-2.6.5/tmp
+export OOZIE_HOME=/home/ubuntu/oozie-4.3.1
+export OOZIE_CONFIG=$OOZIE_HOME/conf
+export PATH=$JAVA_HOME/bin:$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$M2_HOME/bin:$OOZIE_HOME/bin
+
+------set slave1 and slave2-------
+copy hadoop folder to slave1 and slave2, set slave1 and slave2
+
+4. Format namenode on master
+
+------mapred-site.xml-------
+
+hadoop namenode -format
+start-dfs.sh
+jps
+
+5. Install MAVEN
+
+sudo apt-get install maven
+cd /usr/share/maven/conf
+vi settings.xml
+
+------setting.xml-------
+
+<settings>
+    <mirrors>
+        <mirror>
+          <id>centralhttps</id>
+          <mirrorOf>central</mirrorOf>
+          <name>Maven central https</name>
+          <url>http://insecure.repo1.maven.org/maven2/</url>
+        </mirror>
+      </mirrors>
+</settings>
+
+6. Install mysql
+
+sudo apt-get install mysql-server
+sudo apt-get install mysql-client
+sudo apt-get install libmysqlclient-dev
+sudo mysql_secure_installation
+sudo mysql
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+FLUSH PRIVILEGES;
+exit;
+mysql -u root -p
+// how to create users, this is the problem
+CREATE USER 'oozie'@'%' IDENTIFIED BY 'password';
+// CREATE USER 'newuser'@'localhost' IDENTIFIED BY 'password';
+GRANT ALL PRIVILEGES ON oozie.* TO 'oozie'@'%';
+FLUSH PRIVILEGES;
+CREATE DATABASE oozie;
+exit;
+
+7. Install oozie
+
+wget https://archive.apache.org/dist/oozie/4.3.1/oozie-4.3.1.tar.gz
+tar -xf oozie-4.3.1.tar.gz
+vi oozie-4.3.1/pom.xml
+mkdistro.sh -DskipTests -Puber
+mv oozie-4.3.1 oozie-4.3.1_
+cd oozie-4.3.1_/distro/target/
+ls
+mv oozie-4.3.1-distro.tar.gz ~
+modify java version
+modify hadoop version
+
+------oozie-site.xml-------
+
+<property>
+    <name>oozie.service.JPAService.jdbc.driver</name>
+    <value>com.mysql.cj.jdbc.Driver</value>
+</property>
+<property>
+    <name>oozie.service.JPAService.jdbc.url</name>
+    <value>jdbc:mysql://localhost:3306/oozie?useSSL=false</value>
+  </property>
+<property>
+    <name>oozie.service.JPAService.jdbc.username</name>
+    <value>oozie</value>
+</property>
+<property>
+    <name>oozie.service.JPAService.jdbc.password</name>
+    <value>password</value>
+</property>
+<property>
+    <name>oozie.service.HadoopAccessorService.hadoop.configurations</name>
+    <value>*=/home/ubuntu/hadoop-2.6.5/etc/hadoop</value>
+</property>
+<property>
+   <name>oozie.service.WorkflowAppService.system.libpath</name>
+    <value>hdfs://master:9000/user/ubuntu/share/lib</value>
+</property>
+
+------libext-------
+
+mkdir libext
+cp ../hadoop-2.6.5/share/hadoop/*/lib/*.jar libext/
+ cp ../hadoop-2.6.5/share/hadoop/*/*.jar libext/
+wget https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.11/mysql-connector-java-8.0.11.jar
+wget http://archive.cloudera.com/gplextras/misc/ext-2.2.zip
+mv servlet-api-2.5.jar servlet-api-2.5.jar.bak
+mv jsp-api-2.1.jar jsp-api-2.1.jar.bak
+mv jasper-compiler-5.5.23.jar jasper-compiler-5.5.23.jar.bak
+mv jasper-runtime-5.5.23.jar jasper-runtime-5.5.23.jar.bak
+mv slf4j-log4j12-1.7.5.jar slf4j-log4j12-1.7.5.jar.bak
+
+------zip and unzip-------
+
+sudo apt-get install unzip
+sudo apt-get install zip
+
+------war file-------
+
+bin/oozie-setup.sh prepare-war
+
+------oozie-env.sh-------
+
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
+export OOZIE_PREFIX=/home/ubuntu/oozie-4.3.1
+# Set hadoop configuration path  
+export OOZIE_CONF_DIR=/home/ubuntu/oozie-4.3.1/conf/
+export OOZIE_HOME=/home/ubuntu/oozie-4.3.1
+# add hadoop package 
+for file in $OOZIE_HOME/libext/*.jar
+do
+    export CLASSPATH=$CLASSPATH:$file
+done
+
+------historyserver-------
+
+./hadoop-2.6.5/sbin/mr-jobhistory-daemon.sh start historyserver
+./hadoop-2.6.5/sbin/mr-jobhistory-daemon.sh stop historyserver
+jps
+
+------put share on hdfs-------
+
+hdfs dfs -mkdir /user
+hdfs dfs -mkdir /user/ubuntu
+hdfs dfs -put ./share /user/ubuntu
+
+8. Run oozie map-reduce examples
+
+------start hdfs yarn historyserver oozie-------
+
+start-dfs.sh
+start-yarn.sh
+hadoop-2.6.5/sbin/mr-jobhistory-daemon.sh start historyserver
+oozie-4.3.1/bin/oozied.sh start
+
+------stop hdfs yarn historyserver oozie-------
+
+stop-dfs.sh
+stop-yarn.sh
+hadoop-2.6.5/sbin/mr-jobhistory-daemon.sh stop historyserver
+oozie-4.3.1/bin/oozied.sh stop
+
+------run example on oozie-------
+
+bin/ooziedb.sh create -sqlfile oozie.sql -run
+bin/oozied.sh start
+stop oozie : bin/oozied.sh stop
+bin/oozie admin --oozie http://localhost:11000/oozie -status
+tar xf oozie-examples.tar.gz examples/
+vi examples/apps/map-reduce/job.properties
+hdfs dfs -put ~/oozie-4.3.1/examples /user/ubuntu/
+bin/oozie job -oozie http://localhost:11000/oozie -config examples/apps/map-reduce/job.properties -run
+bin/oozie job -oozie http://localhost:11000/oozie -info 0000000-201123063732543-oozie-ubun-W
+
+Part 2 : Run our own map-reduce jobs on oozie on EC2 clusters
+
+1. copy data from localhost to EC2 namenode
+
+scp -i CS644final.pem /Users/mingwu/Desktop/dataverse_files.zip ubuntu@ec2-3-20-204-36.us-east-2.compute.amazonaws.com:/home/ubuntu
+
+2. unzip data
+
+unzip dataverse_files.zip
+bzip2 -d 1987.csv.bz2
+bzip2 -d 1988.csv.bz2
+bzip2 -d 1989.csv.bz2
+bzip2 -d 1990.csv.bz2
+bzip2 -d 1991.csv.bz2
+bzip2 -d 1992.csv.bz2
+bzip2 -d 1993.csv.bz2
+bzip2 -d 1994.csv.bz2
+bzip2 -d 1995.csv.bz2
+bzip2 -d 1996.csv.bz2
+bzip2 -d 1997.csv.bz2
+bzip2 -d 1998.csv.bz2
+bzip2 -d 1999.csv.bz2
+bzip2 -d 2000.csv.bz2
+bzip2 -d 2001.csv.bz2
+bzip2 -d 2002.csv.bz2
+bzip2 -d 2003.csv.bz2
+bzip2 -d 2004.csv.bz2
+bzip2 -d 2005.csv.bz2
+bzip2 -d 2006.csv.bz2
+bzip2 -d 2007.csv.bz2
+bzip2 -d 2008.csv.bz2
+
+3. upload input files onto hdfs 
+
+make input folder : hdfs dfs -mkdir /user/ubuntu/input
+upload to hdfs : hdfs dfs -put /home/ubuntu/data /user/ubuntu/input
+check input : hdfs dfs -ls /user/ubuntu/input
+
+4. upload flight folder (workflow.xml job.properties lib) to hdfs
+
+hdfs dfs -put home/ubuntu/flight/ /user/ubuntu
+
+5. run map-reduce jobs on oozie 
+
+bin/oozie job -oozie http://localhost:11000/oozie -config /user/ubuntu/flight/job.properties -run
+
+6. check job status 
+
+check job information:
+check job info:  bin/oozie job -oozie http://localhost:11000/oozie -info 0000000-201123063732543-oozie-ubun-W
+UI: go to this UI to see the running status
+http://18.222.132.19:11000/oozie/

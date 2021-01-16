@@ -1,0 +1,193 @@
+<workflow-app xmlns="uri:oozie:workflow:1.0" name="map-reduce-flight">
+    <start to="Job1"/>
+    <action name="Job1">
+        <map-reduce>
+            <resource-manager>${resourceManager}</resource-manager>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${nameNode}/user/${wf:user()}/output/schedule"/>
+            </prepare>
+            <configuration>
+				<property>
+                  <name>mapred.mapper.new-api</name>
+                  <value>true</value>
+				</property>
+				<property>
+                  <name>mapred.reducer.new-api</name>
+                  <value>true</value>
+				</property>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>${queueName}</value>
+                </property>
+                <property>
+                    <name>mapreduce.mapper.class</name>
+                    <value>flight.flight$MapperOne</value>
+                </property>
+                <property>
+                    <name>mapreduce.reducer.class</name>
+                    <value>flight.flight$ReducerOne</value>
+                </property>
+                <property>
+                    <name>mapred.reduce.tasks</name>
+                    <value>1</value>
+                </property>
+				<property>
+                    <name>mapreduce.map.output.key.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+                <property>
+                    <name>mapreduce.map.output.value.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+				<property>
+                    <name>mapreduce.job.output.key.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+                <property>
+                    <name>mapreduce.job.output.value.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+                <property>
+                    <name>mapreduce.input.fileinputformat.inputdir</name>
+                    <value>${flightinput}</value>
+                </property>
+                <property>
+                    <name>mapreduce.output.fileoutputformat.outputdir</name>
+                    <value>/user/${wf:user()}/output/schedule</value>
+                </property>
+            </configuration>
+        </map-reduce>
+        <ok to="Job2"/>
+        <error to="error"/>
+    </action>
+    <!-- 2nd map-reduce  -->
+	<action name="Job2">
+        <map-reduce>
+            <resource-manager>${resourceManager}</resource-manager>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${nameNode}/user/${wf:user()}/output/taxi"/>
+            </prepare>
+            <configuration>
+				<property>
+                  <name>mapred.mapper.new-api</name>
+                  <value>true</value>
+				</property>
+				<property>
+                  <name>mapred.reducer.new-api</name>
+                  <value>true</value>
+				</property>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>${queueName}</value>
+                </property>
+                <property>
+                    <name>mapreduce.mapper.class</name>
+                    <value>flight.flight$MapperTwo</value>
+                </property>
+                <property>
+                    <name>mapreduce.reducer.class</name>
+                    <value>flight.flight$ReducerTwo</value>
+                </property>
+                <property>
+                    <name>mapred.reduce.tasks</name>
+                    <value>1</value>
+                </property>
+				<property>
+                    <name>mapreduce.job.output.key.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+                <property>
+                    <name>mapreduce.job.output.value.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+				<property>
+                    <name>mapreduce.map.output.key.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+                <property>
+                    <name>mapreduce.map.output.value.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+                <property>
+                    <name>mapreduce.input.fileinputformat.inputdir</name>
+                    <value>${flightinput}</value>
+                </property>
+                <property>
+                    <name>mapreduce.output.fileoutputformat.outputdir</name>
+                    <value>/user/${wf:user()}/output/taxi</value>
+                </property>
+            </configuration>
+        </map-reduce>
+        <ok to="Job3"/>
+        <error to="error"/>
+    </action>
+    <!-- 3rd map-reduce  -->
+	<action name="Job3">
+        <map-reduce>
+            <resource-manager>${resourceManager}</resource-manager>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${nameNode}/user/${wf:user()}/output/cancellation"/>
+            </prepare>
+            <configuration>
+				<property>
+                  <name>mapred.mapper.new-api</name>
+                  <value>true</value>
+				</property>
+				<property>
+                  <name>mapred.reducer.new-api</name>
+                  <value>true</value>
+				</property>
+                <property>
+                    <name>mapred.job.queue.name</name>
+                    <value>${queueName}</value>
+                </property>
+                <property>
+                    <name>mapreduce.mapper.class</name>
+                    <value>flight.flight$MapperThree</value>
+                </property>
+                <property>
+                    <name>mapreduce.reducer.class</name>
+                    <value>flight.flight$ReducerThree</value>
+                </property>
+                <property>
+                    <name>mapred.reduce.tasks</name>
+                    <value>1</value>
+                </property>
+				<property>
+                    <name>mapreduce.map.output.key.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+                <property>
+                    <name>mapreduce.map.output.value.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+				<property>
+                    <name>mapreduce.job.output.key.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+                <property>
+                    <name>mapreduce.job.output.value.class</name>
+                    <value>org.apache.hadoop.io.Text</value>
+                </property>
+                <property>
+                    <name>mapreduce.input.fileinputformat.inputdir</name>
+                    <value>${flightinput}</value>
+                </property>
+                <property>
+                    <name>mapreduce.output.fileoutputformat.outputdir</name>
+                    <value>/user/${wf:user()}/output/cancellation</value>
+                </property>
+            </configuration>
+        </map-reduce>
+        <ok to="end"/>
+        <error to="error"/>
+    </action>
+    <kill name="error">
+        <message>Map-reduce job failed !</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>
+

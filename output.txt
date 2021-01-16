@@ -1,0 +1,18 @@
+Three airlines with Highest probability for being on schedule:
+YV7958  100.0%
+YV7003  100.0%
+YV6790  100.0%
+Three airlines with lowest probability for being on schedule:
+9E2072  0.0%
+9E2076  0.0%
+9E2102  0.0%
+Three airports with the longest average taxi time per flight:
+MKC     8.0
+CBM     5.0
+GLH     4.25
+Three airports with the shortest average taxi time per flight:
+BFF     0.0
+CYS     0.0
+EAU     0.0
+The most common reason for flight cancellations:
+A       317972
